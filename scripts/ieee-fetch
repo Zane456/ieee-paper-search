@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# ieee-fetch <arnumber> [output.pdf]
+# Download an IEEE Xplore paper PDF via institutional network access
+# (cookieless from the user's view — IEEE grants access by IP).
+# Requires your IP to be inside your institution's IEEE Xplore-registered
+# range (campus network or institutional VPN).
+#
+# Default download dir: $HOME/.claude/skills/ieee-paper-search/downloads/
+# Override with $IEEE_FETCH_DIR. Pass an explicit path as $2 to opt out entirely.
+set -euo pipefail
+
+DEFAULT_DIR="${IEEE_FETCH_DIR:-$HOME/.claude/skills/ieee-paper-search/downloads}"
+INDEX_FILE="$DEFAULT_DIR/INDEX.md"
+
+if [[ $# -lt 1 ]]; then
+  echo "usage: ieee-fetch <arnumber|url> [output.pdf]" >&2
+  echo "  url forms accepted:" >&2
+  echo "    /document/NNNNNN" >&2
+  echo "    /stamp/stamp.jsp?...&arnumber=NNNNNN" >&2
+  echo "    /stampPDF/getPDF.jsp?...&arnumber=NNNNNN" >&2
+  echo "  default download dir: $DEFAULT_DIR" >&2
+  exit 1
+fi
+
+IN="$1"
+if [[ "$IN" =~ ^[0-9]+$ ]]; then
+  AR="$IN"
+elif [[ "$IN" =~ arnumber=([0-9]+) ]]; then
+  AR="${BASH_REMATCH[1]}"
+elif [[ "$IN" =~ /document/([0-9]+) ]]; then
+  AR="${BASH_REMATCH[1]}"
+else
+  echo "could not extract arnumber from: $IN" >&2
+  exit 1
+fi
+
+if [[ -z "${2:-}" ]]; then
+  mkdir -p "$DEFAULT_DIR"
+  OUT="$DEFAULT_DIR/ieee-${AR}.pdf"
+else
+  OUT="$2"
+fi
+UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+JAR="$(mktemp -t ieee-cookies)"
+trap 'rm -f "$JAR"' EXIT
+
+# step 1: warm session (lets IEEE assign institutional CloudFront cookies based on IP)
+curl -sSL -A "$UA" -c "$JAR" -b "$JAR" -o /dev/null \
+  "https://ieeexplore.ieee.org/document/${AR}"
+
+# step 2: fetch PDF binary
+HTTP=$(curl -sSL -A "$UA" -b "$JAR" \
+  -H "Referer: https://ieeexplore.ieee.org/document/${AR}" \
+  -o "$OUT" -w '%{http_code}|%{content_type}' \
+  "https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=${AR}")
+
+CODE="${HTTP%%|*}"
+CT="${HTTP##*|}"
+if [[ "$CODE" != "200" || "$CT" != application/pdf* ]]; then
+  echo "fetch failed: HTTP $CODE ($CT)" >&2
+  echo "(check VPN — your IP must be in your institution's range)" >&2
+  rm -f "$OUT"
+  exit 2
+fi
+
+SIZE=$(stat -f%z "$OUT" 2>/dev/null || wc -c < "$OUT")
+echo "✓ $OUT ($SIZE bytes)"
+
+# Append a 1-line index entry if we wrote into the default dir
+if [[ "$OUT" == "$DEFAULT_DIR"/* ]]; then
+  TS=$(date +"%Y-%m-%d %H:%M")
+  REL=$(basename "$OUT")
+  SIZE_KB=$(( SIZE / 1024 ))
+  if [[ ! -f "$INDEX_FILE" ]]; then
+    mkdir -p "$DEFAULT_DIR"
+    printf '# IEEE PDF download index\n\nAuto-appended by `ieee-fetch`. To inspect a paper: `Read <file>`.\n\n| Time | File | Size |\n|---|---|---|\n' > "$INDEX_FILE"
+  fi
+  printf '| %s | %s | %d KB |\n' "$TS" "$REL" "$SIZE_KB" >> "$INDEX_FILE"
+fi

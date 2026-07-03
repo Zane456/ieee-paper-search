@@ -1,0 +1,4 @@
+# Downloaded PDFs are copyrighted — never commit them
+downloads/
+
+.DS_Store
