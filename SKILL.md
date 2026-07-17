@@ -29,6 +29,8 @@ uv run --directory ~/paper-search-mcp paper-search search "<query>" \
 
 (Adjust `--directory` if paper-search-mcp is cloned elsewhere — see README.)
 
+**If this command cannot run** — sandboxed or read-only environment, `uv` missing, backend not installed (note `uv run` writes a venv cache, which a read-only policy blocks) — **say so and stop**. Never silently substitute hand-rolled API calls: the source choice below is load-bearing, and a quiet fallback discards it without the user ever knowing.
+
 Parameters:
 - `-n 8`: 8 hits per source (after dedup usually 8-15 papers, enough to triage)
 - `-s openalex,semantic`: **hard constraint** — do not use `-s all`, do not run crossref alone (rationale in [references/sources.md](references/sources.md))
