@@ -5,11 +5,20 @@
 # Requires your IP to be inside your institution's IEEE Xplore-registered
 # range (campus network or institutional VPN).
 #
-# Default download dir: $HOME/.claude/skills/ieee-paper-search/downloads/
+# Default download dir: <skill-root>/downloads/, resolved from this script's own
+# location so the skill works wherever it is installed.
 # Override with $IEEE_FETCH_DIR. Pass an explicit path as $2 to opt out entirely.
 set -euo pipefail
 
-DEFAULT_DIR="${IEEE_FETCH_DIR:-$HOME/.claude/skills/ieee-paper-search/downloads}"
+# Resolve this script's real path (following symlinks), then step up to the skill root.
+SELF="${BASH_SOURCE[0]}"
+while [[ -L "$SELF" ]]; do
+  LINK="$(readlink "$SELF")"
+  [[ "$LINK" == /* ]] && SELF="$LINK" || SELF="$(dirname "$SELF")/$LINK"
+done
+SKILL_ROOT="$(cd "$(dirname "$SELF")/.." && pwd)"
+
+DEFAULT_DIR="${IEEE_FETCH_DIR:-$SKILL_ROOT/downloads}"
 INDEX_FILE="$DEFAULT_DIR/INDEX.md"
 
 if [[ $# -lt 1 ]]; then
@@ -73,7 +82,7 @@ if [[ "$OUT" == "$DEFAULT_DIR"/* ]]; then
   SIZE_KB=$(( SIZE / 1024 ))
   if [[ ! -f "$INDEX_FILE" ]]; then
     mkdir -p "$DEFAULT_DIR"
-    printf '# IEEE PDF download index\n\nAuto-appended by `ieee-fetch`. To inspect a paper: `Read <file>`.\n\n| Time | File | Size |\n|---|---|---|\n' > "$INDEX_FILE"
+    printf '# IEEE PDF download index\n\nAuto-appended by `ieee-fetch`. Open a paper with whatever PDF reader your agent has.\n\n| Time | File | Size |\n|---|---|---|\n' > "$INDEX_FILE"
   fi
   printf '| %s | %s | %d KB |\n' "$TS" "$REL" "$SIZE_KB" >> "$INDEX_FILE"
 fi

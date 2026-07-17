@@ -11,7 +11,7 @@ ieee-fetch "https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10374220"  
 ieee-fetch 10374220 paper.pdf                                # custom output filename
 ```
 
-Default output: `~/.claude/skills/ieee-paper-search/downloads/ieee-<arnumber>.pdf` (override with `$IEEE_FETCH_DIR`, or pass an explicit path as the second argument).
+Default output: `<skill-root>/downloads/ieee-<arnumber>.pdf`, resolved from the script's own location so it lands beside the skill wherever it is installed (override with `$IEEE_FETCH_DIR`, or pass an explicit path as the second argument).
 
 ## How it works
 
@@ -59,4 +59,4 @@ ls -la
 
 ## After the PDF lands
 
-`Read /tmp/survey-<topic>/<file>.pdf` — pull the full text for summaries / method extraction / comparison.
+Pull the full text for summaries / method extraction / comparison, using whatever the host agent offers — a native PDF reader (Claude Code: `Read <path>.pdf`), an installed `pdf` skill, or `pdftotext <path>.pdf -` on the command line.

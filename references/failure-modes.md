@@ -100,7 +100,7 @@
 ❌ Pretending to have read the PDF (inventing full-text content from the abstract)
 → hallucinated citations and claims
 
-✅ Actually download the PDF → `Read <pdf>` → answer from the full text
+✅ Actually download the PDF → open it with the host agent's PDF reader (or `pdftotext`) → answer from the full text
 → accurate
 
 ---

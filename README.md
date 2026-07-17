@@ -5,7 +5,7 @@
 # ieee-paper-search
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform: Claude Code](https://img.shields.io/badge/Platform-Claude%20Code-blueviolet.svg)](https://claude.com/claude-code)
+[![Platform: Claude Code | Codex](https://img.shields.io/badge/Platform-Claude%20Code%20%7C%20Codex-blueviolet.svg)](https://claude.com/claude-code)
 ![Type: Agent Skill](https://img.shields.io/badge/Type-Agent%20Skill-blue.svg)
 ![Scope: IEEE only](https://img.shields.io/badge/Scope-IEEE%20only-brightgreen.svg)
 
@@ -29,10 +29,20 @@ This skill is useless without all three of these. Check them before installing.
    PDF download works by institutional IP recognition — your machine's IP must be inside an IP range your university/company has registered with its IEEE Xplore subscription. In practice that means being on the **campus network or the institutional VPN**. No subscription → search and triage still work, but full-text download returns HTTP 502.
    Quick check: `curl -sS https://ifconfig.me` must show an IP in your institution's range, and opening a paywalled paper on `ieeexplore.ieee.org` in a browser should show the PDF button unlocked.
 
-2. **[Claude Code](https://claude.com/claude-code) is the recommended platform.**
-   This is an Agent Skill (`SKILL.md` + references), designed and daily-driven in Claude Code. Other harnesses that read SKILL.md may work but are untested.
+2. **An agent that loads Agent Skills, plus a shell.**
+   This is a plain Agent Skill (`SKILL.md` + references) with no host-specific tooling — the search backend and `ieee-fetch` are ordinary command-line programs. Developed and daily-driven in [Claude Code](https://claude.com/claude-code); the layout is also what [Codex](https://developers.openai.com/codex/) reads from `~/.codex/skills/`. Any harness that reads `SKILL.md` and can run shell commands should work. Reading the downloaded PDFs is the one step that varies by host — see step 8 in `SKILL.md`.
 
-3. **[paper-search-mcp](https://github.com/openags/paper-search-mcp) + [uv](https://docs.astral.sh/uv/)** provide the search backend (OpenAlex + Semantic Scholar). Install steps below.
+3. **These external tools.** Nothing here is exotic — most of it ships with macOS and Linux already.
+
+   | Tool | What it is for | Install |
+   |---|---|---|
+   | [`uv`](https://docs.astral.sh/uv/) | runs the search backend | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+   | [paper-search-mcp](https://github.com/openags/paper-search-mcp) | the search backend itself — queries OpenAlex + Semantic Scholar | step 3 of Install, below |
+   | `git` | clones this skill and the backend | preinstalled, or `brew install git` |
+   | `bash` + `curl` | `ieee-fetch` is a bash script driving curl | preinstalled on macOS and Linux |
+   | [Poppler](https://poppler.freedesktop.org/) | **optional** — reading the downloaded PDFs, only needed if your agent has no PDF reader of its own and no `pdf` skill (see step 8 of `SKILL.md`) | `brew install poppler` / `apt install poppler-utils` |
+
+   No IEEE account, no API key, no paid service. Institutional access is by IP alone (point 1).
 
 ---
 
@@ -73,13 +83,17 @@ Everything listed is guaranteed fetchable. Papers whose DOI prefix is not `10.11
 ## Install
 
 ```bash
-# 1. The skill itself
+# 1. The skill itself — clone into wherever your agent loads skills from
+#      Claude Code : ~/.claude/skills/ieee-paper-search
+#      Codex       : ~/.codex/skills/ieee-paper-search
+#    The rest of these steps assume Claude Code; substitute your own path.
 git clone https://github.com/Zane456/ieee-paper-search.git ~/.claude/skills/ieee-paper-search
 
-# 2. The ieee-fetch downloader
+# 2. The ieee-fetch downloader — symlink it, do not copy it
+#    (it finds its own skill directory to decide where PDFs land, so a copy
+#     would strand your downloads next to the copy)
 mkdir -p ~/.local/bin
-cp ~/.claude/skills/ieee-paper-search/scripts/ieee-fetch ~/.local/bin/
-chmod +x ~/.local/bin/ieee-fetch
+ln -s ~/.claude/skills/ieee-paper-search/scripts/ieee-fetch ~/.local/bin/ieee-fetch
 # make sure ~/.local/bin is on your PATH
 
 # 3. The search backend

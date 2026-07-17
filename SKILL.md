@@ -96,7 +96,7 @@ Full template and examples: [references/output-template.md](references/output-te
 
 **Single path**: `ieee-fetch <arnumber|url>`
 
-Downloads to `~/.claude/skills/ieee-paper-search/downloads/ieee-<arnumber>.pdf` by default and auto-appends a line (time / filename / size) to `INDEX.md` in the same directory. To see what has been downloaded, Read that INDEX.md — **never `ls` the whole PDF pile into context**.
+Downloads to `<skill-root>/downloads/ieee-<arnumber>.pdf` by default. The script resolves its own location, so this lands beside the skill wherever it is installed; override with `$IEEE_FETCH_DIR`. It auto-appends a line (time / filename / size) to `INDEX.md` in the same directory. To see what has been downloaded, read that INDEX.md — **never `ls` the whole PDF pile into context**.
 
 Your machine's IP must be inside your institution's IEEE Xplore-registered range (campus network or VPN). Detailed constraints: [references/ieee-fetch.md](references/ieee-fetch.md).
 
@@ -106,19 +106,23 @@ Your machine's IP must be inside your institution's IEEE Xplore-registered range
 
 ### 8. (Optional) Read the PDF
 
-`Read <path>.pdf` — renders the PDF into context (figures, summaries, method extraction).
+Open the PDF with whatever capability the host agent has, in this order:
+
+1. A native PDF reader, if the agent has one (Claude Code: `Read <path>.pdf` renders pages into context)
+2. An installed `pdf` skill
+3. Poppler on the command line — `pdftotext <path>.pdf -` for text, `pdftoppm -png -r 150 <path>.pdf <prefix>` to render pages as images
 
 ### 9. Chain into other skills (**recommend proactively**)
 
-After the PDFs land, depending on what the user wants next, **ask** whether to chain (only offer skills that are actually installed):
+After the PDFs land, **check what is actually installed**, then ask whether to chain. The rows below are intents to match against the host's skill list, not skills you may assume exist.
 
-| User intent | Recommended skill |
+| User intent | Look for |
 |---|---|
-| Extract tables / figures / annotations / references from PDFs | `pdf` skill |
-| Turn several papers into a survey | `deep-research` pipeline |
-| Write a paper on top of these references | `academic-paper` skill |
+| Extract tables / figures / annotations / references from PDFs | a PDF-processing skill |
+| Turn several papers into a survey | a deep-research / literature-review pipeline |
+| Write a paper on top of these references | an academic-writing skill |
 
-Ask format: "Downloaded. Continue with — A. pdf skill table extraction / B. switch to deep-research for a survey / C. something else?" Never act silently.
+Ask format: "Downloaded. Continue with — A. <installed skill> / B. <installed skill> / C. something else?" If nothing relevant is installed, just ask what the user wants next. Never name a skill you have not confirmed, and never act silently.
 
 ## Common pitfalls
 

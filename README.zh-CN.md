@@ -29,10 +29,20 @@
    PDF 下载靠机构 IP 识别，你机器的 IP 必须落在学校/单位向 IEEE Xplore 注册的 IP 段内。实际上就是**连着校园网或机构 VPN**。没有订阅时搜索和筛选仍可用，但全文下载会返回 HTTP 502。
    快速自检，`curl -sS https://ifconfig.me` 显示的 IP 要在机构网段内，浏览器里打开 `ieeexplore.ieee.org` 的付费论文应能看到解锁的 PDF 按钮。
 
-2. **推荐在 [Claude Code](https://claude.com/claude-code) 上使用。**
-   这是一个 Agent Skill（`SKILL.md` + references），在 Claude Code 里设计并日常使用。其他能读 SKILL.md 的框架或许能跑，但未测试。
+2. **一个能加载 Agent Skill 的 agent，外加一个 shell。**
+   这是一个不依赖特定宿主的 Agent Skill（`SKILL.md` + references），搜索后端和 `ieee-fetch` 都是普通命令行程序。在 [Claude Code](https://claude.com/claude-code) 里设计并日常使用，同样的目录结构也是 [Codex](https://developers.openai.com/codex/) 从 `~/.codex/skills/` 读取的格式。任何能读 `SKILL.md` 又能跑 shell 的框架都应该可用。唯一因宿主而异的是读 PDF 那步，见 `SKILL.md` 第 8 步。
 
-3. **[paper-search-mcp](https://github.com/openags/paper-search-mcp) + [uv](https://docs.astral.sh/uv/)** 提供搜索后端（OpenAlex + Semantic Scholar）。安装步骤见下。
+3. **这些外部工具。** 都不冷门，macOS 和 Linux 大多自带。
+
+   | 工具 | 用来干什么 | 安装 |
+   |---|---|---|
+   | [`uv`](https://docs.astral.sh/uv/) | 跑搜索后端 | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+   | [paper-search-mcp](https://github.com/openags/paper-search-mcp) | 搜索后端本体，查 OpenAlex + Semantic Scholar | 见下面安装第 3 步 |
+   | `git` | 克隆本 skill 和后端 | 自带，或 `brew install git` |
+   | `bash` + `curl` | `ieee-fetch` 是个驱动 curl 的 bash 脚本 | macOS 和 Linux 自带 |
+   | [Poppler](https://poppler.freedesktop.org/) | **可选**，读下载好的 PDF 用。仅当你的 agent 既没有自带 PDF 读取能力、也没装 `pdf` skill 时才需要（见 `SKILL.md` 第 8 步） | `brew install poppler` / `apt install poppler-utils` |
+
+   不需要 IEEE 账号，不需要 API key，不需要付费服务。机构权限只认 IP（见第 1 条）。
 
 ---
 
@@ -74,13 +84,16 @@ skill 跑完整管线，**搜索 → IEEE-only 过滤 → 去噪 → 排序 → 
 ## 安装
 
 ```bash
-# 1. skill 本体
+# 1. skill 本体，克隆到你的 agent 加载 skill 的目录
+#      Claude Code : ~/.claude/skills/ieee-paper-search
+#      Codex       : ~/.codex/skills/ieee-paper-search
+#    下面几步按 Claude Code 写，换成你自己的路径即可。
 git clone https://github.com/Zane456/ieee-paper-search.git ~/.claude/skills/ieee-paper-search
 
-# 2. ieee-fetch 下载器
+# 2. ieee-fetch 下载器，用软链接，别用 cp
+#    （脚本靠定位自身所在的 skill 目录决定 PDF 存哪，拷贝一份会让下载落到副本旁边）
 mkdir -p ~/.local/bin
-cp ~/.claude/skills/ieee-paper-search/scripts/ieee-fetch ~/.local/bin/
-chmod +x ~/.local/bin/ieee-fetch
+ln -s ~/.claude/skills/ieee-paper-search/scripts/ieee-fetch ~/.local/bin/ieee-fetch
 # 确认 ~/.local/bin 在 PATH 里
 
 # 3. 搜索后端
